@@ -1,11 +1,13 @@
 package com.example.trading_alert.config;
 
-import com.example.trading_alert.service.MarketWebSocketHandler;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+
+import com.example.trading_alert.service.MarketWebSocketHandler;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSocket
@@ -19,9 +21,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(marketWebSocketHandler, "/ws/prices")
                 .setAllowedOrigins(
                         "http://localhost:5173",
-                        "http://localhost:5174",
-                        "http://127.0.0.1:5173",
-                        "http://127.0.0.1:5174"
+                        "https://ai-forex-alert-system.onrender.com"
                 );
     }
 }
