@@ -1,9 +1,10 @@
 package com.example.trading_alert.repository;
 
-import com.example.trading_alert.entity.Alert;
+import java.util.List;
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-import java.util.List;
+import com.example.trading_alert.entity.Alert;
 
 public interface AlertRepository
         extends MongoRepository<Alert,String> {
@@ -11,4 +12,6 @@ public interface AlertRepository
     List<Alert> findByUserId(String userId);
 
     List<Alert> findByStatus(String status);
+
+    List<Alert> findByStatusAndTriggeredFalse(String status);
 }

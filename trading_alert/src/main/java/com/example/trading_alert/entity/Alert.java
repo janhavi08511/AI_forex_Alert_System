@@ -2,6 +2,7 @@ package com.example.trading_alert.entity;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -27,5 +28,10 @@ public class Alert {
 
     private String status;
     private boolean triggered;
+    @Version
+    private Long version;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime triggeredAt;
+    private LocalDateTime snoozedUntil;
 }

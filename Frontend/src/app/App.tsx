@@ -1034,11 +1034,133 @@ function AlertsPage({ alerts, setAlerts, onToast, onCreate }: {
         <p className="text-sm text-slate-400">Create and manage price alerts</p>
       </div>
 
-      <XAUUSDCard onQuickAlert={handleQuickAlert} />
-      <CreateAlertForm onSuccess={(message) => onToast(message)} onCreate={(alert) => {
-        setAlerts((prev) => [alert, ...prev]);
-        onCreate?.(alert);
-      }} />
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-800/60 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800/80 p-6 shadow-2xl shadow-black/20">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-400">Alert Builder</p>
+                <h3 className="mt-2 text-lg font-semibold text-white">Create a precise price alert</h3>
+                <p className="mt-1 text-sm text-slate-400">Monitor your favorite pairs and get notified the moment your target is reached.</p>
+              </div>
+              <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
+                Live
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-xl border border-slate-800/70 bg-slate-950/60 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Quick setup</p>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2 text-sm text-slate-300">
+                    <span>Choose a symbol</span>
+                    <span className="font-mono text-white">{pair}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2 text-sm text-slate-300">
+                    <span>Price target</span>
+                    <span className="font-mono text-white">{price || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2 text-sm text-slate-300">
+                    <span>Condition</span>
+                    <span className="font-mono capitalize text-white">{condition}</span>
+                  </div>
+                </div>
+              </div>
+              <XAUUSDCard onQuickAlert={handleQuickAlert} />
+            </div>
+          </div>
+
+          <div className="bg-[#111827] border border-slate-800/60 rounded-xl p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-white">Create or update an alert</h3>
+                <p className="text-sm text-slate-400">A single form handles both creating and editing alerts.</p>
+              </div>
+              <div className="rounded-full border border-slate-700/60 bg-slate-800/60 px-3 py-1 text-xs font-medium text-slate-300">
+                {editId ? "Editing" : "Ready"}
+              </div>
+            </div>
+            <form onSubmit={handleCreate}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Currency Pair</label>
+                  <select value={pair} onChange={e => setPair(e.target.value)} className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all">
+                    {availablePairs.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Target Price</label>
+                  <input type="number" step="0.00001" value={price} onChange={e => setPrice(e.target.value)} placeholder="1.08500" className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Condition</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-700/60">
+                    {(["above", "below", "touch"] as const).map(c => (
+                      <button key={c} type="button" onClick={() => setCondition(c)} className={cn("flex-1 py-2.5 text-xs font-medium capitalize transition-all", condition === c ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white")}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Notify Via</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-700/60">
+                    {([['sound', Volume2], ['email', Mail], ['telegram', Send]] as const).map(([m, Icon]) => (
+                      <button key={m} type="button" onClick={() => setMethod(m)} className={cn("flex-1 py-2.5 flex items-center justify-center transition-all", method === m ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white")}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button type="submit" className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-all hover:shadow-lg hover:shadow-blue-500/25">
+                  {editId ? <><Edit2 className="w-4 h-4" />Update Alert</> : <><Plus className="w-4 h-4" />Create Alert</>}
+                </button>
+                <button type="button" onClick={() => { setPrice(""); setPair(availablePairs[0] ?? "EUR/USD"); setCondition("above"); setMethod("sound"); setEditId(null); }} className="px-5 py-2.5 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-all">
+                  Reset
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Overview</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">Alert health</h3>
+              </div>
+              <div className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
+                {alerts.filter((alert) => alert.status === "active").length} active
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-lg border border-slate-800/70 bg-slate-950/70 p-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Managed alerts</p>
+                <p className="mt-1 text-2xl font-semibold text-white">{alerts.length}</p>
+              </div>
+              <div className="rounded-lg border border-slate-800/70 bg-slate-950/70 p-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Triggered</p>
+                <p className="mt-1 text-2xl font-semibold text-white">{alerts.filter((alert) => alert.status === "triggered").length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+              <Bell className="h-4 w-4 text-blue-400" />
+              Tips
+            </div>
+            <ul className="mt-4 space-y-2 text-sm text-slate-400">
+              <li>• Use touch alerts when you want a precise price hit.</li>
+              <li>• Keep the price target clear before saving.</li>
+              <li>• Use snooze or dismiss after an alert is triggered.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <AlertTable
         alerts={alertRows}
         onPause={(id) => {
@@ -1056,6 +1178,7 @@ function AlertsPage({ alerts, setAlerts, onToast, onCreate }: {
       />
 
       {/* Form */}
+      {false && (
       <div className="bg-[#111827] border border-slate-800/60 rounded-xl p-6">
         <h3 className="font-semibold text-white mb-5 flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-blue-600/20 flex items-center justify-center">
@@ -1106,6 +1229,7 @@ function AlertsPage({ alerts, setAlerts, onToast, onCreate }: {
           </div>
         </form>
       </div>
+      )}
 
       {/* Table */}
       <div className="bg-[#111827] border border-slate-800/60 rounded-xl overflow-hidden">
@@ -1710,6 +1834,31 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const backendUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const wsUrl = backendUrl.replace(/^http/, "ws") + "/ws/prices";
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload.type !== "ALERT_TRIGGERED") return;
+
+        setAlerts((prev) => prev.map((alert) =>
+          alert.id === payload.alertId ? { ...alert, status: "triggered" } : alert
+        ));
+        setTriggeredAlert({ pair: payload.pair, price: payload.targetPrice });
+        playAlarm();
+      } catch {
+        // Ignore malformed websocket payloads.
+      }
+    };
+
+    return () => socket.close();
+  }, []);
+
+  useEffect(() => {
     const activeTriggered = alerts.find((alert) => alert.status === "triggered");
     if (activeTriggered) {
       setTriggeredAlert({ pair: activeTriggered.pair, price: activeTriggered.targetPrice });
@@ -1735,13 +1884,13 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
 
       const price = snapshot.price;
       const target = alert.targetPrice;
-      const tolerance = Math.max(Math.abs(target * 0.002), 0.0001);
+      const pointSize = alert.pair.includes("XAU") || alert.pair.includes("GOLD") ? 1 : Math.max(0.0001, Math.abs(target) * 0.0001);
       const shouldTrigger =
         alert.condition === "above"
-          ? price >= target
+          ? price >= target + pointSize
           : alert.condition === "below"
-            ? price <= target
-            : Math.abs(price - target) <= tolerance;
+            ? price <= target - pointSize
+            : Math.abs(price - target) <= 0.000001;
 
       if (!shouldTrigger) return alert;
       changed = true;

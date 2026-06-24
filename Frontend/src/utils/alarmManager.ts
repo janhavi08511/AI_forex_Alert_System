@@ -2,6 +2,7 @@ let audio: HTMLAudioElement | null = null;
 let fallbackAudioContext: AudioContext | null = null;
 let fallbackOscillator: OscillatorNode | null = null;
 let fallbackGain: GainNode | null = null;
+let alarmTimer: number | null = null;
 
 function ensureAudio() {
   if (typeof window === "undefined") return null;
@@ -29,9 +30,13 @@ function ensureFallbackAudio() {
   }
 }
 
-export function playAlarm() {
+export function playAlarm(durationMs = 60000) {
   const alarm = ensureAudio();
   if (!alarm) return;
+
+  if (alarmTimer) {
+    window.clearTimeout(alarmTimer);
+  }
 
   alarm.currentTime = 0;
   alarm.play().catch(() => {
@@ -45,9 +50,16 @@ export function playAlarm() {
       fallbackGain.gain.linearRampToValueAtTime(0.03, fallbackAudioContext.currentTime + 0.1);
     }
   });
+
+  alarmTimer = window.setTimeout(() => stopAlarm(), durationMs);
 }
 
 export function stopAlarm() {
+  if (alarmTimer) {
+    window.clearTimeout(alarmTimer);
+    alarmTimer = null;
+  }
+
   if (audio) {
     audio.pause();
     audio.currentTime = 0;
