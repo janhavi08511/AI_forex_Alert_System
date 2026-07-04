@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { XAUUSDCard } from "./components/charts/XAUUSDCard";
 import { AlertModal } from "../components/alerts/AlertModal";
 import { useAuth } from "../context/AuthContext";
