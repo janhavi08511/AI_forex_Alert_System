@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -15,16 +16,31 @@ import com.example.trading_alert.repository.AlertRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class AlertEngineService {
 
     private final AlertRepository alertRepository;
     private final PriceSnapshotService priceSnapshotService;
     private final MarketWebSocketHandler marketWebSocketHandler;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    public AlertEngineService(AlertRepository alertRepository,
+                              PriceSnapshotService priceSnapshotService,
+                              MarketWebSocketHandler marketWebSocketHandler,
+                              NotificationService notificationService) {
+        this.alertRepository = alertRepository;
+        this.priceSnapshotService = priceSnapshotService;
+        this.marketWebSocketHandler = marketWebSocketHandler;
+        this.notificationService = notificationService;
+    }
+
+    public AlertEngineService(AlertRepository alertRepository,
+                              PriceSnapshotService priceSnapshotService,
+                              MarketWebSocketHandler marketWebSocketHandler) {
+        this(alertRepository, priceSnapshotService, marketWebSocketHandler, null);
+    }
 
     @Scheduled(fixedRate = 10000)
     public void checkAlerts() {
@@ -55,6 +71,9 @@ public class AlertEngineService {
         alert.setTriggeredAt(now);
         alert.setUpdatedAt(now);
         alertRepository.save(alert);
+        if (notificationService != null) {
+            notificationService.sendAlertNotification(alert);
+        }
         broadcastTrigger(alert);
     }
 

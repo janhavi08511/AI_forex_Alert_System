@@ -3,7 +3,9 @@ import { XAUUSDCard } from "./components/charts/XAUUSDCard";
 import { AlertModal } from "../components/alerts/AlertModal";
 import { useAuth } from "../context/AuthContext";
 import { useMarketData } from "../context/MarketDataContext";
+import { useNotifications } from "../context/NotificationContext";
 import { LivePriceCard } from "../components/market/LivePriceCard";
+import { NotificationToast } from "../components/notifications/NotificationToast";
 import { register } from "../services/authService";
 import { playAlarm, stopAlarm } from "../utils/alarmManager";
 import { TradingChart } from "../components/charts/TradingChart";
@@ -71,8 +73,12 @@ interface Notification {
   id: string;
   type: "alert" | "triggered" | "system";
   title: string;
-  message: string;
-  time: string;
+  message?: string;
+  body?: string;
+  time?: string;
+  createdAt?: string;
+  pair?: string;
+  price?: number;
   read: boolean;
 }
 
@@ -606,8 +612,10 @@ function Topbar({ onNavigate, user, notifCount, sidebarCollapsed }: {
 }) {
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isConnected] = useState(true);
   const time = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const { notifications, markAsRead } = useNotifications();
 
   return (
     <header className={cn(
@@ -632,15 +640,49 @@ function Topbar({ onNavigate, user, notifCount, sidebarCollapsed }: {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => onNavigate("notifications")}
-          className="relative w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all"
-        >
-          <Bell className="w-4 h-4" />
-          {notifCount > 0 && (
-            <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+        <div className="relative">
+          <button
+            onClick={() => { setShowNotifications((prev) => !prev); setShowDropdown(false); }}
+            className="relative w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+          >
+            <Bell className="w-4 h-4" />
+            {notifCount > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-[10px] font-semibold text-white flex items-center justify-center">
+                {notifCount > 9 ? "9+" : notifCount}
+              </div>
+            )}
+          </button>
+          {showNotifications && (
+            <div className="absolute right-0 top-full mt-1 w-80 rounded-xl border border-slate-700/60 bg-[#1a2235] p-3 shadow-2xl z-50">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">Recent alerts</p>
+                  <p className="text-xs text-slate-400">Latest market updates</p>
+                </div>
+                <button onClick={() => onNavigate("notifications")} className="text-xs text-blue-400 hover:text-blue-300">View all</button>
+              </div>
+              <div className="space-y-2">
+                {notifications.slice(0, 4).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { markAsRead(item.id); onNavigate("alerts"); setShowNotifications(false); }}
+                    className={cn("w-full rounded-lg border px-3 py-2 text-left transition-all", item.read ? "border-slate-800/60 bg-slate-900/70" : "border-blue-500/20 bg-blue-500/10")}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-white">{item.title}</p>
+                        <p className="text-xs text-slate-400">{item.message || item.body}</p>
+                      </div>
+                      {!item.read && <div className="mt-1 h-2 w-2 rounded-full bg-blue-400" />}
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">{item.time || item.createdAt}</p>
+                  </button>
+                ))}
+                {notifications.length === 0 && <p className="px-2 py-4 text-center text-sm text-slate-500">No notifications yet</p>}
+              </div>
+            </div>
           )}
-        </button>
+        </div>
 
         <div className="relative">
           <button
@@ -1403,10 +1445,7 @@ function TriggeredAlertsPage({ triggeredAlerts }: { triggeredAlerts: TriggeredAl
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-function NotificationsPage({ notifications, setNotifications }: { notifications: Notification[]; setNotifications: (n: Notification[]) => void }) {
-  const markAll = () => setNotifications(notifications.map(n => ({ ...n, read: true })));
-  const markOne = (id: string) => setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-  const deleteOne = (id: string) => setNotifications(notifications.filter(n => n.id !== id));
+function NotificationsPage({ notifications, onMarkAllRead, onMarkOneRead, onDeleteOne }: { notifications: Notification[]; onMarkAllRead: () => void; onMarkOneRead: (id: string) => void; onDeleteOne: (id: string) => void }) {
   const unread = notifications.filter(n => !n.read).length;
 
   return (
@@ -1417,7 +1456,7 @@ function NotificationsPage({ notifications, setNotifications }: { notifications:
           <p className="text-sm text-slate-400">{unread} unread notifications</p>
         </div>
         {unread > 0 && (
-          <button onClick={markAll} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-all">
+          <button onClick={onMarkAllRead} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-all">
             <CheckCheck className="w-4 h-4" /> Mark all read
           </button>
         )}
@@ -1440,24 +1479,27 @@ function NotificationsPage({ notifications, setNotifications }: { notifications:
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-white text-sm">{n.title}</p>
-                  <p className="text-sm text-slate-400 mt-0.5">{n.message}</p>
+                  <p className="text-sm text-slate-400 mt-0.5">{n.message || n.body}</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!n.read && (
-                    <button onClick={() => markOne(n.id)} className="p-1.5 rounded-lg hover:bg-blue-500/15 text-slate-400 hover:text-blue-400 transition-all" title="Mark read">
+                    <button onClick={() => onMarkOneRead(n.id)} className="p-1.5 rounded-lg hover:bg-blue-500/15 text-slate-400 hover:text-blue-400 transition-all" title="Mark read">
                       <Check className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button onClick={() => deleteOne(n.id)} className="p-1.5 rounded-lg hover:bg-red-500/15 text-slate-400 hover:text-red-400 transition-all" title="Delete">
+                  <button onClick={() => onDeleteOne(n.id)} className="p-1.5 rounded-lg hover:bg-red-500/15 text-slate-400 hover:text-red-400 transition-all" title="Delete">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />{n.time}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />{n.time || n.createdAt}
                 </span>
+                {n.pair && <span className="rounded-full border border-slate-700/60 bg-slate-800/60 px-2 py-0.5 font-mono text-[11px] text-slate-300">{n.pair}</span>}
+                {typeof n.price === "number" && <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 font-mono text-[11px] text-blue-300">{n.price.toFixed(5)}</span>}
                 <Badge variant={n.type === "triggered" ? "success" : n.type === "alert" ? "default" : "muted"}>{n.type}</Badge>
+                {n.read ? <Badge variant="muted">Read</Badge> : <Badge variant="default">Unread</Badge>}
               </div>
             </div>
           </div>
@@ -1825,18 +1867,20 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
   const [page, setPage] = useState<Page>(initialPage);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS);
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "warning" } | null>(null);
   const [triggeredAlert, setTriggeredAlert] = useState<{ pair: string; price: number } | null>(null);
   const user = MOCK_USER;
+  const { notifications, unreadCount, latestNotification, dismissLatestNotification, addNotification, markAsRead, removeNotification } = useNotifications();
 
   const showToast = (msg: string, type: "success" | "error" | "warning" = "success") => setToast({ msg, type });
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const backendUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const rawBackendUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
+    const backendUrl = rawBackendUrl.includes("||")
+      ? rawBackendUrl.split("||")[0].trim()
+      : rawBackendUrl.trim() || "http://localhost:8081";
     const wsUrl = backendUrl.replace(/^http/, "ws") + "/ws/prices";
     const socket = new WebSocket(wsUrl);
 
@@ -1902,17 +1946,17 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
     if (!changed) return;
 
     setAlerts(nextAlerts);
-    setNotifications((prev) => [
-      ...newTriggered.map((alert) => ({
+    newTriggered.forEach((alert) => {
+      addNotification({
         id: `${alert.id}-${Date.now()}`,
-        type: "triggered" as const,
+        type: "triggered",
         title: `Alert triggered: ${alert.pair}`,
-        message: `${alert.pair} reached ${alert.targetPrice.toFixed(5)}`,
-        time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        read: false,
-      })),
-      ...prev,
-    ]);
+        body: `${alert.pair} reached ${alert.targetPrice.toFixed(5)}`,
+        pair: alert.pair,
+        price: alert.targetPrice,
+        alertId: alert.id,
+      });
+    });
   }, [marketData, alerts]);
 
   const navigateTo = (p: Page) => {
@@ -1937,7 +1981,7 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
     market: <MarketWatch onNavigate={navigateTo} />,
     alerts: <AlertsPage alerts={alerts} setAlerts={setAlerts} onToast={showToast} onCreate={(alert) => setAlerts((prev) => [alert, ...prev])} />,
     triggered: <TriggeredAlertsPage triggeredAlerts={triggeredAlerts} />,
-    notifications: <NotificationsPage notifications={notifications} setNotifications={setNotifications} />,
+    notifications: <NotificationsPage notifications={notifications} onMarkAllRead={() => notifications.forEach((item) => item.read || markAsRead(item.id))} onMarkOneRead={markAsRead} onDeleteOne={removeNotification} />,
     charts: <ChartsPage />,
     profile: <ProfilePage user={user} onToast={showToast} />,
     settings: <SettingsPage onToast={showToast} />,
@@ -1967,6 +2011,16 @@ function Dashboard({ initialPage, onLogout }: { initialPage: Page; onLogout: () 
         />
       )}
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {latestNotification && (
+        <NotificationToast
+          notification={latestNotification}
+          onOpenChart={() => {
+            navigateTo("alerts");
+            dismissLatestNotification();
+          }}
+          onDismiss={() => dismissLatestNotification()}
+        />
+      )}
     </div>
   );
 }

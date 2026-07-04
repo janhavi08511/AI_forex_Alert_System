@@ -3,6 +3,8 @@ package com.example.trading_alert.controller;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,7 +36,7 @@ public class AlertController {
     public Alert createAlert(
             @RequestBody CreateAlertRequest request) {
 
-        return alertService.createAlert(request);
+        return alertService.createAlert(request, currentUserIdentifier());
     }
 
     @GetMapping
@@ -64,5 +66,13 @@ public class AlertController {
         alert.setSnoozedUntil(null);
         alert.setUpdatedAt(LocalDateTime.now());
         return alertRepository.save(alert);
+    }
+
+    private String currentUserIdentifier() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        return authentication.getName();
     }
 }
